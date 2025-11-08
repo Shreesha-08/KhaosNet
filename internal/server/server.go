@@ -16,7 +16,12 @@ func (s *Server) NewServer(lis net.Listener) {
 	s.broadcaster = NewBroadcaster()
 }
 
-func (s *Server) AcceptConnection() {
+func (s *Server) Start() {
+	go s.broadcaster.Run()
+	s.AcceptConnections()
+}
+
+func (s *Server) AcceptConnections() {
 	for {
 		fmt.Println("New connection received")
 		conn, err1 := s.listener.Accept()
@@ -25,9 +30,8 @@ func (s *Server) AcceptConnection() {
 		}
 		clientName := fmt.Sprintf("User%d", s.nextID)
 		s.nextID++
-		client := &Client{conn: conn, name: clientName}
-		go func() {
-			s.broadcaster.joinCh <- client
-		}()
+		client := &Client{conn: conn, name: clientName, broadcaster: s.broadcaster, writeCh: make(chan string, 10)}
+		go client.Read()
+		go client.Write()
 	}
 }

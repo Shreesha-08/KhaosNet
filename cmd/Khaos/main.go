@@ -16,5 +16,5 @@ func main() {
 	defer listener.Close()
 	newServer := &server.Server{}
 	newServer.NewServer(listener)
-	newServer.AcceptConnection()
+	newServer.Start()
 }
