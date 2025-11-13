@@ -3,10 +3,11 @@ package server
 import "fmt"
 
 type Broadcaster struct {
-	clients map[string]*Client
-	joinCh  chan *Client
-	leaveCh chan *Client
-	msgCh   chan *ClientMessage
+	clients      map[string]*Client
+	joinCh       chan *Client
+	leaveCh      chan *Client
+	msgCh        chan *ClientMessage
+	privateMsgCh chan *ClientMessage
 }
 
 func NewBroadcaster() *Broadcaster {
@@ -14,7 +15,8 @@ func NewBroadcaster() *Broadcaster {
 	join := make(chan *Client, 10)
 	leave := make(chan *Client)
 	msg := make(chan *ClientMessage, 10)
-	return &Broadcaster{clients: clientMap, joinCh: join, leaveCh: leave, msgCh: msg}
+	privateMsg := make(chan *ClientMessage, 10)
+	return &Broadcaster{clients: clientMap, joinCh: join, leaveCh: leave, msgCh: msg, privateMsgCh: privateMsg}
 }
 
 func (b *Broadcaster) Run() {
@@ -36,8 +38,19 @@ func (b *Broadcaster) Run() {
 				if msg.name == b.clients[client].name {
 					continue
 				}
-				b.clients[client].writeCh <- msg.msg
+				select {
+				case b.clients[client].writeCh <- msg.msg:
+				default:
+					fmt.Printf("Dropping message for %s (writeCh full)\n", client)
+				}
 			}
+		case privateMsg := <-b.privateMsgCh:
+			_, exists := b.clients[privateMsg.name]
+			if !exists {
+				// can send error back if sender client is stored
+				continue
+			}
+			b.clients[privateMsg.name].writeCh <- privateMsg.msg
 		}
 	}
 }

@@ -40,6 +40,7 @@ func (c *Client) Read() {
 		c.conn.Write([]byte("Username already taken!\n"))
 	}
 	c.broadcaster.joinCh <- c
+	cmdHandler := NewCommandHandler()
 	for {
 		buf := make([]byte, 256)
 		n, err := c.conn.Read(buf)
@@ -47,13 +48,13 @@ func (c *Client) Read() {
 			return
 		}
 		msgStr := strings.TrimSpace(string(buf[:n]))
-		if msgStr == "leave" {
-			return
-		} else {
-			fmt.Println("Received msg: ", msgStr)
-			msg := &ClientMessage{msg: fmt.Sprintf("%s: %s", c.name, msgStr), name: c.name}
-			c.broadcaster.msgCh <- msg
+		if strings.HasPrefix(msgStr, "/") {
+			cmdHandler.HandleCommand(c, msgStr)
+			continue
 		}
+		fmt.Println("Received msg: ", msgStr)
+		msg := &ClientMessage{msg: fmt.Sprintf("%s: %s", c.name, msgStr), name: c.name}
+		c.broadcaster.msgCh <- msg
 	}
 }
 
