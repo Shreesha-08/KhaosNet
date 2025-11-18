@@ -6,18 +6,17 @@ import (
 )
 
 type Server struct {
-	listener    net.Listener
-	broadcaster *Broadcaster
-	nextID      int
+	listener net.Listener
+	roomMgr  *RoomManager
+	nextID   int
 }
 
 func (s *Server) NewServer(lis net.Listener) {
 	s.listener = lis
-	s.broadcaster = NewBroadcaster()
+	s.roomMgr = NewRoomManager()
 }
 
 func (s *Server) Start() {
-	go s.broadcaster.Run()
 	s.AcceptConnections()
 }
 
@@ -30,7 +29,7 @@ func (s *Server) AcceptConnections() {
 		}
 		clientName := fmt.Sprintf("User%d", s.nextID)
 		s.nextID++
-		client := &Client{conn: conn, name: clientName, broadcaster: s.broadcaster, writeCh: make(chan string, 10)}
+		client := &Client{conn: conn, name: clientName, currentRoom: nil, state: "lobby", writeCh: make(chan string, 10), server: s}
 		go client.Read()
 		go client.Write()
 	}

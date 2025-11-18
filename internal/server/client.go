@@ -16,12 +16,14 @@ type Client struct {
 	name    string
 	writeCh chan string
 	// doneCh      chan struct{}
-	broadcaster *Broadcaster
+	currentRoom *Room
+	state       string
+	server      *Server
 }
 
 func (c *Client) Read() {
 	defer func() {
-		c.broadcaster.leaveCh <- c
+		c.currentRoom.broadcaster.leaveCh <- c
 		close(c.writeCh)
 		c.conn.Close()
 	}()
@@ -39,8 +41,8 @@ func (c *Client) Read() {
 		}
 		c.conn.Write([]byte("Username already taken!\n"))
 	}
-	c.broadcaster.joinCh <- c
-	cmdHandler := NewCommandHandler()
+	// c.broadcaster.joinCh <- c
+	commandHandler := NewCommandHandler()
 	for {
 		buf := make([]byte, 256)
 		n, err := c.conn.Read(buf)
@@ -49,12 +51,17 @@ func (c *Client) Read() {
 		}
 		msgStr := strings.TrimSpace(string(buf[:n]))
 		if strings.HasPrefix(msgStr, "/") {
-			cmdHandler.HandleCommand(c, msgStr)
+			commandHandler.HandleCommand(c, msgStr)
+			continue
+		}
+
+		if c.state == "lobby" {
+			c.writeCh <- "You need to join a chat room to send messages. "
 			continue
 		}
 		fmt.Println("Received msg: ", msgStr)
 		msg := &ClientMessage{msg: fmt.Sprintf("%s: %s", c.name, msgStr), name: c.name}
-		c.broadcaster.msgCh <- msg
+		c.currentRoom.broadcaster.msgCh <- msg
 	}
 }
 
@@ -63,13 +70,15 @@ func (c *Client) Write() {
 		_, err := c.conn.Write([]byte(msg + "\n"))
 		if err != nil {
 			fmt.Println("Error writing to client:", c.name, err)
-			c.broadcaster.leaveCh <- c
+			c.currentRoom.broadcaster.leaveCh <- c
 			return
 		}
 	}
 }
 
 func (c *Client) CheckUniqueName(name string) bool {
-	_, exists := c.broadcaster.clients[name]
-	return !exists
+	// TODO: make this server level
+	// _, exists := c.currentRoom.broadcaster.clients[name]
+	// return !exists
+	return true
 }
