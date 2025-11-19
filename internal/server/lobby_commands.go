@@ -40,6 +40,8 @@ func joinRoomCommand(c *Client, args []string) {
 		}
 		c.state = "inRoom"
 		c.currentRoom = r
+		c.currentRoom.broadcaster.joinCh <- c
+		return
 	}
 	c.writeCh <- "Invalid use of command."
 }

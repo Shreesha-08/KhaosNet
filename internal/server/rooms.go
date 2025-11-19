@@ -28,7 +28,7 @@ func (rm *RoomManager) CreateRoom(roomName string) (*Room, error) {
 	}
 	newRoom := &Room{name: roomName, broadcaster: NewBroadcaster()}
 	rm.rooms[roomName] = newRoom
-	newRoom.broadcaster.Run()
+	go newRoom.broadcaster.Run()
 	return newRoom, nil
 }
 
