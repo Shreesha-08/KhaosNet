@@ -3,6 +3,9 @@ package server
 import (
 	"fmt"
 	"net"
+	"net/http"
+
+	"github.com/coder/websocket"
 )
 
 type Server struct {
@@ -17,20 +20,45 @@ func (s *Server) NewServer(lis net.Listener) {
 }
 
 func (s *Server) Start() {
-	s.AcceptConnections()
+	go s.AcceptConnections() // TCP + WebSocket
+	http.HandleFunc("/ws", s.WebSocketHandler)
+	fmt.Println("WebSocket server on :8080")
+	http.ListenAndServe(":8080", nil)
 }
 
 func (s *Server) AcceptConnections() {
 	for {
-		fmt.Println("New connection received")
 		conn, err1 := s.listener.Accept()
 		if err1 != nil {
 			fmt.Println("Error getting connection")
 		}
-		clientName := fmt.Sprintf("User%d", s.nextID)
-		s.nextID++
-		client := &Client{conn: conn, name: clientName, currentRoom: nil, state: "lobby", writeCh: make(chan string, 10), server: s}
+		clientName := s.GenerateName()
+		tcpConn := NewTCPConnection(conn)
+		client := NewClient(tcpConn, s, clientName)
 		go client.Read()
 		go client.Write()
 	}
+}
+
+func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		InsecureSkipVerify: true, // okay for local development
+	})
+	if err != nil {
+		return
+	}
+
+	ws := NewWebSocketConn(conn)
+
+	clientName := s.GenerateName()
+	client := NewClient(ws, s, clientName)
+
+	go client.Read()
+	go client.Write()
+}
+
+func (s *Server) GenerateName() string {
+	name := fmt.Sprintf("User%d", s.nextID)
+	s.nextID++
+	return name
 }

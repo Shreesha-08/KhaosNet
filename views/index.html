@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<body>
+<input id="msg" autofocus />
+<button onclick="send()">Send</button>
+<pre id="chat"></pre>
+
+<script>
+let ws = new WebSocket("ws://localhost:8080/ws");
+
+ws.onmessage = (e) => {
+    document.getElementById("chat").textContent += e.data + "\n";
+};
+
+function send() {
+    var msg = document.getElementById("msg").value
+    ws.send(JSON.stringify({ text: msg }));
+    document.getElementById("msg").value = "";
+}
+</script>
+</body>
+</html>

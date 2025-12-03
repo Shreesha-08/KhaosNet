@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"net"
 	"strings"
 )
 
@@ -12,7 +11,7 @@ type ClientMessage struct {
 }
 
 type Client struct {
-	conn    net.Conn
+	conn    Connection
 	name    string
 	writeCh chan string
 	// doneCh      chan struct{}
@@ -21,35 +20,34 @@ type Client struct {
 	server      *Server
 }
 
+func NewClient(conn Connection, s *Server, name string) *Client {
+	return &Client{conn: conn, name: name, currentRoom: nil, state: "lobby", writeCh: make(chan string, 10), server: s}
+}
+
 func (c *Client) Read() {
 	defer func() {
-		c.currentRoom.broadcaster.leaveCh <- c
-		close(c.writeCh)
-		c.conn.Close()
+		c.Close()
 	}()
 	for {
-		c.conn.Write([]byte("Enter your Username: "))
-		namebuf := make([]byte, 64)
-		n, err := c.conn.Read(namebuf)
+		c.conn.Write("Enter your Username: ")
+		name, err := c.conn.Read()
 		if err != nil {
+			fmt.Println(err.Error())
 			return
 		}
-		name := strings.TrimSpace(string(namebuf[:n]))
 		if c.CheckUniqueName(name) {
 			c.name = name
 			break
 		}
-		c.conn.Write([]byte("Username already taken!\n"))
+		c.conn.Write("Username already taken!\n")
 	}
 	// c.broadcaster.joinCh <- c
 	commandHandler := NewCommandHandler()
 	for {
-		buf := make([]byte, 256)
-		n, err := c.conn.Read(buf)
+		msgStr, err := c.conn.Read()
 		if err != nil {
 			return
 		}
-		msgStr := strings.TrimSpace(string(buf[:n]))
 		if strings.HasPrefix(msgStr, "/") {
 			commandHandler.HandleCommand(c, msgStr)
 			continue
@@ -67,13 +65,20 @@ func (c *Client) Read() {
 
 func (c *Client) Write() {
 	for msg := range c.writeCh {
-		_, err := c.conn.Write([]byte(msg + "\n"))
+		err := c.conn.Write(msg)
 		if err != nil {
 			fmt.Println("Error writing to client:", c.name, err)
-			c.currentRoom.broadcaster.leaveCh <- c
 			return
 		}
 	}
+}
+
+func (c *Client) Close() {
+	if c.currentRoom != nil {
+		c.currentRoom.broadcaster.leaveCh <- c
+	}
+	// close(c.writeCh)
+	c.conn.Close()
 }
 
 func (c *Client) CheckUniqueName(name string) bool {

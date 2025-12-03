@@ -23,7 +23,6 @@ func (b *Broadcaster) Run() {
 	for {
 		select {
 		case client := <-b.joinCh:
-			fmt.Println("New client joined")
 			b.clients[client.name] = client
 			client.writeCh <- fmt.Sprintf("Welcome, %s", client.name)
 			msg := &ClientMessage{msg: fmt.Sprintf("%s joined!", client.name), name: client.name}
