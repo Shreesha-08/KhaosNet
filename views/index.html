@@ -1,22 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>KhaosNet Chat</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Optional: Google Font for better UI -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
 <body>
-<input id="msg" autofocus />
-<button onclick="send()">Send</button>
-<pre id="chat"></pre>
 
-<script>
-let ws = new WebSocket("ws://localhost:8080/ws");
+<div id="container">
 
-ws.onmessage = (e) => {
-    document.getElementById("chat").textContent += e.data + "\n";
-};
+    <!-- Sidebar -->
+    <div id="sidebar">
+        <h2 class="logo">KhaosNet</h2>
 
-function send() {
-    var msg = document.getElementById("msg").value
-    ws.send(JSON.stringify({ text: msg }));
-    document.getElementById("msg").value = "";
-}
-</script>
+        <div class="section-title">Rooms</div>
+        <ul id="roomList" class="room-list">
+            <li class="room active" data-room="lobby">Lobby</li>
+        </ul>
+
+        <button id="createRoomBtn" class="btn-primary">+ Create Room</button>
+    </div>
+
+    <!-- Chat Window -->
+    <div id="chat">
+
+        <!-- Current Room Header -->
+        <div id="chatHeader">
+            <h3 id="currentRoomName">Lobby</h3>
+        </div>
+
+        <!-- Messages -->
+        <div id="messages"></div>
+
+        <!-- Input -->
+        <div id="inputBar">
+            <input id="msg" type="text" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+</div>
+
+<div id="usernameModal" class="modal hidden">
+    <div class="modal-content">
+        <h3>Choose Username</h3>
+        <input id="usernameInput" placeholder="Enter username" />
+        <button id="usernameConfirm">Join Chat</button>
+    </div>
+</div>
+
+
+<!-- Create Room Modal -->
+<div id="modalOverlay" class="hidden">
+    <div id="modal">
+        <h3>Create Room</h3>
+        <input id="newRoomName" type="text" placeholder="Room name">
+        <div class="modal-actions">
+            <button id="createRoomConfirm" class="btn-primary">Create</button>
+            <button id="createRoomCancel" class="btn-secondary">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>

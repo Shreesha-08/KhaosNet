@@ -27,17 +27,17 @@ func (s *Server) Start() {
 }
 
 func (s *Server) AcceptConnections() {
-	for {
-		conn, err1 := s.listener.Accept()
-		if err1 != nil {
-			fmt.Println("Error getting connection")
-		}
-		clientName := s.GenerateName()
-		tcpConn := NewTCPConnection(conn)
-		client := NewClient(tcpConn, s, clientName)
-		go client.Read()
-		go client.Write()
-	}
+	// for {
+	// 	conn, err1 := s.listener.Accept()
+	// 	if err1 != nil {
+	// 		fmt.Println("Error getting connection")
+	// 	}
+	// 	clientName := s.GenerateName()
+	// 	tcpConn := NewTCPConnection(conn)
+	// 	client := NewClient(tcpConn, s, clientName)
+	// 	go client.Read()
+	// 	go client.Write()
+	// }
 }
 
 func (s *Server) WebSocketHandler(w http.ResponseWriter, r *http.Request) {

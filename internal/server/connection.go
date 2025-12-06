@@ -2,6 +2,7 @@ package server
 
 type Connection interface {
 	Read() (string, error)
-	Write(msg string) error
+	ReadAndGetData() (*IncomingMessage, error)
+	Write(v interface{}) error
 	Close() error
 }

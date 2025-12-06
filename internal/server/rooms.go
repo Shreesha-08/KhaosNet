@@ -24,7 +24,7 @@ func (rm *RoomManager) CreateRoom(roomName string) (*Room, error) {
 	defer rm.mu.Unlock()
 
 	if _, exists := rm.rooms[roomName]; exists {
-		return nil, errors.New("room name already taken!")
+		return nil, errors.New("room name already taken")
 	}
 	newRoom := &Room{name: roomName, broadcaster: NewBroadcaster()}
 	rm.rooms[roomName] = newRoom

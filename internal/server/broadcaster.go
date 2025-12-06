@@ -1,6 +1,8 @@
 package server
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Broadcaster struct {
 	clients      map[string]*Client
@@ -24,32 +26,38 @@ func (b *Broadcaster) Run() {
 		select {
 		case client := <-b.joinCh:
 			b.clients[client.name] = client
-			client.writeCh <- fmt.Sprintf("Welcome, %s", client.name)
-			msg := &ClientMessage{msg: fmt.Sprintf("%s joined!", client.name), name: client.name}
-			b.msgCh <- msg
+			welcome := NewOutgoing("system", "server", client.currentRoom.name, fmt.Sprintf("Welcome, %s", client.name))
+			client.writeCh <- welcome
+			join := NewOutgoing("user_joined", client.name, client.currentRoom.name, fmt.Sprintf("%s joined!", client.name))
+			b.msgCh <- &ClientMessage{msg: join, name: client.name}
+
 		case client := <-b.leaveCh:
 			delete(b.clients, client.name)
-			// close(client.writeCh)
-			msg := &ClientMessage{msg: fmt.Sprintf("%s left!", client.name), name: client.name}
-			b.msgCh <- msg
+			leave := NewOutgoing("user_left", client.name, client.currentRoom.name, fmt.Sprintf("%s left!", client.name))
+			b.msgCh <- &ClientMessage{msg: leave, name: client.name}
+
 		case msg := <-b.msgCh:
-			for client := range b.clients {
-				if msg.name == b.clients[client].name {
+			for _, cl := range b.clients {
+				if msg.name == cl.name {
 					continue
 				}
 				select {
-				case b.clients[client].writeCh <- msg.msg:
+				case cl.writeCh <- msg.msg:
 				default:
-					fmt.Printf("Dropping message for %s (writeCh full)\n", client)
+					fmt.Printf("Dropping message for %s (writeCh full)\n", cl.name)
 				}
 			}
 		case privateMsg := <-b.privateMsgCh:
-			_, exists := b.clients[privateMsg.name]
+			target, exists := b.clients[privateMsg.name]
 			if !exists {
-				// can send error back if sender client is stored
 				continue
 			}
-			b.clients[privateMsg.name].writeCh <- privateMsg.msg
+
+			select {
+			case target.writeCh <- privateMsg.msg:
+			default:
+				fmt.Printf("Dropping private message for %s (writeCh full)\n", privateMsg.name)
+			}
 		}
 	}
 }

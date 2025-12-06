@@ -1,6 +1,8 @@
 package server
 
-import "strings"
+import (
+	"fmt"
+)
 
 type CommandFunc func(client *Client, args []string)
 
@@ -21,18 +23,23 @@ func (ch *CommandHandler) Register(cmd string, fn CommandFunc) {
 	ch.commands[cmd] = fn
 }
 
-func (ch *CommandHandler) HandleCommand(c *Client, input string) bool {
-	parts := strings.Fields(input)
-	if len(parts) == 0 {
-		return false
-	}
-
-	cmd := parts[0]
-	args := parts[1:]
-
+func (ch *CommandHandler) HandleCommand(c *Client, cmd string, args []string) bool {
 	handler, ok := ch.commands[cmd]
 	if !ok {
-		c.writeCh <- "Unknown command"
+		var room string
+		if c.state == "lobby" {
+			room = "lobby"
+		} else {
+			room = c.currentRoom.name
+		}
+
+		out := NewOutgoing(
+			"error",
+			"server",
+			room,
+			fmt.Sprintf("Unknown command: %s", cmd),
+		)
+		c.writeCh <- out
 		return true
 	}
 

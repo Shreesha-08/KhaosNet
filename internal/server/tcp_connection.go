@@ -22,6 +22,11 @@ func (tc *TCPConn) Read() (string, error) {
 	return strings.TrimSpace(string(buf[:n])), nil
 }
 
+func (tc *TCPConn) ReadAndGetData() (*IncomingMessage, error) {
+	// To be implemented
+	return nil, nil
+}
+
 func (tc *TCPConn) Write(msg string) error {
 	_, err := tc.conn.Write([]byte(msg + "\n"))
 	return err

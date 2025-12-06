@@ -6,60 +6,51 @@ import (
 )
 
 type ClientMessage struct {
-	msg  string
+	msg  OutgoingMessage
 	name string
 }
 
 type Client struct {
-	conn    Connection
-	name    string
-	writeCh chan string
-	// doneCh      chan struct{}
+	conn        Connection
+	name        string
+	writeCh     chan OutgoingMessage
+	usernameSet bool
 	currentRoom *Room
 	state       string
 	server      *Server
 }
 
 func NewClient(conn Connection, s *Server, name string) *Client {
-	return &Client{conn: conn, name: name, currentRoom: nil, state: "lobby", writeCh: make(chan string, 10), server: s}
+	return &Client{conn: conn, name: name, currentRoom: nil, state: "lobby", writeCh: make(chan OutgoingMessage, 10), server: s}
 }
 
 func (c *Client) Read() {
-	defer func() {
-		c.Close()
-	}()
-	for {
-		c.conn.Write("Enter your Username: ")
-		name, err := c.conn.Read()
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
-		if c.CheckUniqueName(name) {
-			c.name = name
-			break
-		}
-		c.conn.Write("Username already taken!\n")
-	}
-	// c.broadcaster.joinCh <- c
+	defer c.Close()
 	commandHandler := NewCommandHandler()
 	for {
-		msgStr, err := c.conn.Read()
+		incoming, err := c.conn.ReadAndGetData()
 		if err != nil {
 			return
 		}
-		if strings.HasPrefix(msgStr, "/") {
-			commandHandler.HandleCommand(c, msgStr)
+		if !c.usernameSet {
+			if incoming.Command != "" && incoming.Command == "/username" {
+				c.handleSetUsername(incoming.Args[0])
+			} else {
+				c.sendError("Please set your username first.")
+			}
+			continue
+		}
+		if incoming.Command != "" {
+			commandHandler.HandleCommand(c, incoming.Command, incoming.Args)
 			continue
 		}
 
 		if c.state == "lobby" {
-			c.writeCh <- "You need to join a chat room to send messages. "
+			c.writeCh <- NewOutgoing("message", c.name, "lobby", "You need to join a chat room to send messages.")
 			continue
 		}
-		fmt.Println("Received msg: ", msgStr)
-		msg := &ClientMessage{msg: fmt.Sprintf("%s: %s", c.name, msgStr), name: c.name}
-		c.currentRoom.broadcaster.msgCh <- msg
+		out := NewOutgoing("message", c.name, c.currentRoom.name, incoming.Text)
+		c.currentRoom.broadcaster.msgCh <- &ClientMessage{msg: out, name: c.name}
 	}
 }
 
@@ -79,6 +70,35 @@ func (c *Client) Close() {
 	}
 	// close(c.writeCh)
 	c.conn.Close()
+}
+
+func (c *Client) handleSetUsername(name string) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		c.sendError("Username cannot be empty.")
+		return
+	}
+
+	if !c.CheckUniqueName(name) {
+		out := NewOutgoing("username_rejected", "server", "lobby", "Username already taken.")
+		c.writeCh <- out
+		return
+	}
+	c.name = name
+	c.usernameSet = true
+	out := NewOutgoing("username_accepted", "server", "lobby", name)
+	c.writeCh <- out
+
+}
+
+func (c *Client) sendError(text string) {
+	out := NewOutgoing(
+		"error",
+		"server",
+		"lobby",
+		text,
+	)
+	c.writeCh <- out
 }
 
 func (c *Client) CheckUniqueName(name string) bool {

@@ -11,43 +11,106 @@ func RegisterLobbyCommands(ch *CommandHandler) {
 }
 
 func roomsCommand(c *Client, args []string) {
-	tmp := c.server.roomMgr.ListRooms()
-	c.writeCh <- "Available Rooms:"
-	for i, name := range tmp {
-		c.writeCh <- fmt.Sprintf("%d. %s", i, name)
+	rooms := c.server.roomMgr.ListRooms()
+	resp := NewOutgoing(
+		"rooms_list",
+		"server",
+		"lobby",
+		"",
+	)
+	resp.Data = map[string]any{
+		"rooms": rooms,
 	}
+	c.writeCh <- resp
 }
 
 func createRoomCommand(c *Client, args []string) {
-	if len(args) == 1 {
-		room, err := c.server.roomMgr.CreateRoom(args[0])
-		if err != nil {
-			c.writeCh <- err.Error()
-			return
-		}
-		c.writeCh <- fmt.Sprintf("Room created with name %s", room.name)
+	if len(args) != 1 {
+		out := NewOutgoing(
+			"error",
+			"server",
+			"lobby",
+			"Invalid argument. Usage: /create <roomname>",
+		)
+		c.writeCh <- out
 		return
 	}
-	c.writeCh <- "Invalid argument. Space is not allowed in room names."
+
+	roomName := args[0]
+	room, err := c.server.roomMgr.CreateRoom(roomName)
+	if err != nil {
+		out := NewOutgoing(
+			"error",
+			"server",
+			"lobby",
+			err.Error(),
+		)
+		c.writeCh <- out
+		return
+	}
+
+	out := NewOutgoing(
+		"room_created",
+		"server",
+		room.name,
+		fmt.Sprintf("Room created: %s", room.name),
+	)
+	c.writeCh <- out
 }
 
 func joinRoomCommand(c *Client, args []string) {
-	if len(args) == 1 {
-		r := c.server.roomMgr.GetRoom(args[0])
-		if r == nil {
-			c.writeCh <- "Invalid room name."
-			return
-		}
-		c.state = "inRoom"
-		c.currentRoom = r
-		c.currentRoom.broadcaster.joinCh <- c
+	if len(args) != 1 {
+		out := NewOutgoing(
+			"error",
+			"server",
+			"lobby",
+			"Usage: /join <roomname>",
+		)
+		c.writeCh <- out
 		return
 	}
-	c.writeCh <- "Invalid use of command."
+
+	roomName := args[0]
+	room := c.server.roomMgr.GetRoom(roomName)
+	if room == nil {
+		out := NewOutgoing(
+			"error",
+			"server",
+			"lobby",
+			"Room not found.",
+		)
+		c.writeCh <- out
+		return
+	}
+
+	c.state = "inRoom"
+	c.currentRoom = room
+
+	ack := NewOutgoing(
+		"system",
+		"server",
+		roomName,
+		fmt.Sprintf("Joined room: %s", roomName),
+	)
+	c.writeCh <- ack
+	c.currentRoom.broadcaster.joinCh <- c
 }
 
 func lobbyHelpCommand(c *Client, args []string) {
-	c.writeCh <- "Available commands: \n1. /rooms \n2. /create \n3. /join \n4. /exit"
+	helpText := "Available commands:\n" +
+		"1. /rooms\n" +
+		"2. /create <room>\n" +
+		"3. /join <room>\n" +
+		"4. /name <newname>\n" +
+		"5. /exit"
+
+	out := NewOutgoing(
+		"system",
+		"server",
+		"lobby",
+		helpText,
+	)
+	c.writeCh <- out
 }
 
 func exitCommand(c *Client, args []string) {
