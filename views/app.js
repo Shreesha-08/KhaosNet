@@ -1,11 +1,13 @@
 let ws;
 let currentRoom = "lobby";
 let username = null;
+let roomUsers = [];
 
-/* ----------------- Username modal ------------------ */
 const usernameModal = document.getElementById("usernameModal");
 const usernameInput = document.getElementById("usernameInput");
 const usernameConfirm = document.getElementById("usernameConfirm");
+const userInfo = document.getElementById("userInfo");
+var currentRoomName = document.getElementById("currentRoomName");
 
 /* ------------------------ CONNECT ------------------------ */
 function connect(username) {
@@ -62,10 +64,16 @@ function handleMessage(msg) {
 
         case "user_joined":
             addSystemMessage(`🔵 ${msg.from} joined ${msg.room}`);
+            ws.send(JSON.stringify({
+                command: "/list"
+            }));
             break;
 
         case "user_left":
             addSystemMessage(`🔴 ${msg.from} left ${msg.room}`);
+            ws.send(JSON.stringify({
+                command: "/list"
+            }));
             break;
 
         case "user_renamed":
@@ -83,6 +91,10 @@ function handleMessage(msg) {
 
         case "private":
             addPrivateMessage(msg.from, msg.text);
+            break;
+
+        case "users_list":
+            updateUserList(msg.data.users);
             break;
 
         default:
@@ -164,8 +176,12 @@ function joinRoom(roomName) {
         args: [roomName]
     }));
 
-    addSystemMessage(`Switched to room: ${roomName}`);
+    ws.send(JSON.stringify({
+        command: "/list"
+    }));
 
+    currentRoomName.innerText = roomName;
+    addSystemMessage(`Switched to room: ${roomName}`);
     highlightActiveRoom();
 }
 
@@ -173,6 +189,12 @@ function highlightActiveRoom() {
     document.querySelectorAll(".room").forEach(li => {
         li.classList.toggle("active", li.dataset.room === currentRoom);
     });
+}
+
+function updateUserList(users) {
+    roomUsers = users;
+    userInfo.innerText = `${users.length} user${users.length !== 1 ? 's' : ''} online`;
+    // addSystemMessage("Users in room: " + users.join(", "));
 }
 
 /* ------------------------- SEND MESSAGE -------------------- */

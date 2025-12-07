@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 func RegisterRoomCommands(ch *CommandHandler) {
@@ -13,23 +14,22 @@ func RegisterRoomCommands(ch *CommandHandler) {
 }
 
 func listUsersCommand(c *Client, args []string) {
-	out := NewOutgoing(
-		"system",
-		"server",
-		c.currentRoom.name,
-		"Connected Users:",
-	)
-	c.writeCh <- out
+	users := make([]string, 0)
 
 	for username := range c.currentRoom.broadcaster.clients {
-		userMsg := NewOutgoing(
-			"user_entry",
-			"server",
-			c.currentRoom.name,
-			username,
-		)
-		c.writeCh <- userMsg
+		users = append(users, username)
 	}
+
+	resp := OutgoingMessage{
+		Type: "users_list",
+		Room: c.currentRoom.name,
+		Data: map[string]any{
+			"users": users,
+		},
+		Timestamp: time.Now().Unix(),
+	}
+
+	c.writeCh <- resp
 }
 
 func changeNameCommand(c *Client, args []string) {

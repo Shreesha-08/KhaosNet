@@ -282,3 +282,9 @@ body {
     margin-top: 15px;
     width: 100%;
 }
+
+.user-info {
+    font-size: 13px;
+    color: #aaa;
+    margin-top: -5px;
+}
