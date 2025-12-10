@@ -288,3 +288,9 @@ body {
     color: #aaa;
     margin-top: -5px;
 }
+
+.message.mine {
+    text-align: right;
+    font-weight: 600;
+    color: #4caf50;
+}

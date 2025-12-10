@@ -2,11 +2,13 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 )
 
 type Room struct {
 	name        string
+	owner       *Client
 	broadcaster *Broadcaster
 }
 
@@ -19,14 +21,21 @@ func NewRoomManager() *RoomManager {
 	return &RoomManager{rooms: make(map[string]*Room)}
 }
 
-func (rm *RoomManager) CreateRoom(roomName string) (*Room, error) {
+func (rm *RoomManager) CreateRoom(c *Client, roomName string) (*Room, error) {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
 
 	if _, exists := rm.rooms[roomName]; exists {
 		return nil, errors.New("room name already taken")
 	}
-	newRoom := &Room{name: roomName, broadcaster: NewBroadcaster()}
+	newRoom := &Room{name: roomName, owner: c, broadcaster: NewBroadcaster()}
+	out := NewOutgoing(
+		"system",
+		"server",
+		c.currentRoom.name,
+		fmt.Sprintf("You are the owner of \"%s\"", roomName),
+	)
+	c.writeCh <- out
 	rm.rooms[roomName] = newRoom
 	go newRoom.broadcaster.Run()
 	return newRoom, nil

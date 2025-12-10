@@ -37,7 +37,7 @@ func createRoomCommand(c *Client, args []string) {
 	}
 
 	roomName := args[0]
-	room, err := c.server.roomMgr.CreateRoom(roomName)
+	room, err := c.server.roomMgr.CreateRoom(c, roomName)
 	if err != nil {
 		out := NewOutgoing(
 			"error",

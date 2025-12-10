@@ -22,6 +22,7 @@
         </ul>
 
         <button id="createRoomBtn" class="btn-primary">+ Create Room</button>
+        <button id="changeNameBtn" class="btn-secondary">Change Name</button>
     </div>
 
     <!-- Chat Window -->
@@ -53,6 +54,17 @@
     </div>
 </div>
 
+<!-- Change Username Modal -->
+<div id="changeNameModal" class="modal hidden">
+    <div class="modal-content">
+        <h3>Change Username</h3>
+        <input id="changeNameInput" placeholder="New username" />
+        <div class="modal-actions">
+            <button id="changeNameConfirm" class="btn-primary">Update</button>
+            <button id="changeNameCancel" class="btn-secondary">Cancel</button>
+        </div>
+    </div>
+</div>
 
 <!-- Create Room Modal -->
 <div id="modalOverlay" class="hidden">

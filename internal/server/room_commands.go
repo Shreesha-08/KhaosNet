@@ -11,6 +11,7 @@ func RegisterRoomCommands(ch *CommandHandler) {
 	ch.Register("/name", changeNameCommand)
 	ch.Register("/leave", leaveRoomCommand)
 	ch.Register("/msg", privateMessageCommand)
+	ch.Register("/kick", kickUser)
 }
 
 func listUsersCommand(c *Client, args []string) {
@@ -113,5 +114,35 @@ func privateMessageCommand(c *Client, args []string) {
 	c.currentRoom.broadcaster.privateMsgCh <- &ClientMessage{
 		msg:  out,
 		name: targetName,
+	}
+}
+
+func kickUser(c *Client, args []string) {
+	if len(args) == 1 {
+		if c.currentRoom.owner.name == c.name {
+			targetName := args[0]
+			if targetName == c.name {
+				out := NewOutgoing(
+					"error",
+					"server",
+					c.currentRoom.name,
+					"Can't kick yourself out mate!",
+				)
+				c.writeCh <- out
+				return
+			}
+			removedClient, exists := c.currentRoom.broadcaster.clients[targetName]
+			if exists {
+				c.currentRoom.broadcaster.leaveCh <- removedClient
+			}
+		} else {
+			out := NewOutgoing(
+				"error",
+				"server",
+				c.currentRoom.name,
+				"Only room owner can kick users.",
+			)
+			c.writeCh <- out
+		}
 	}
 }

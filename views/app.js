@@ -6,6 +6,9 @@ let roomUsers = [];
 const usernameModal = document.getElementById("usernameModal");
 const usernameInput = document.getElementById("usernameInput");
 const usernameConfirm = document.getElementById("usernameConfirm");
+const changeNameBtn = document.getElementById("changeNameBtn");
+const changeNameModal = document.getElementById("changeNameModal");
+const changeNameInput = document.getElementById("changeNameInput");
 const userInfo = document.getElementById("userInfo");
 var currentRoomName = document.getElementById("currentRoomName");
 
@@ -55,6 +58,11 @@ function handleMessage(msg) {
             break;
 
         case "system":
+            if (msg.text.startsWith("Username changed to")) {
+                const parts = msg.text.split(" ");
+                const newName = parts[parts.length - 1];
+                username = newName;
+            }
             addSystemMessage(msg.text);
             break;
 
@@ -104,7 +112,16 @@ function handleMessage(msg) {
 
 /* ------------------------- UI HELPERS ---------------------- */
 function addChatMessage(user, text) {
-    addMessage(`[${user}] ${text}`);
+    let messages = document.getElementById("messages");
+
+    let div = document.createElement("div");
+    div.className = (user === username)
+        ? "message mine"
+        : "message";
+
+    div.innerText = `[${user}] ${text}`;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
 }
 
 function addSystemMessage(text) {
@@ -207,6 +224,7 @@ function sendMessage() {
         text: msg,
         room: currentRoom
     }));
+    addChatMessage(username, msg);
 
     document.getElementById("msg").value = "";
 }
@@ -256,6 +274,31 @@ usernameConfirm.onclick = () => {
 usernameInput.addEventListener("keypress", (e) => {
     if (e.key === "Enter") usernameConfirm.onclick();
 });
+
+changeNameBtn.onclick = () => {
+    changeNameModal.classList.remove("hidden");
+    changeNameInput.value = "";
+    changeNameInput.focus();
+};
+
+document.getElementById("changeNameCancel").onclick = () => {
+    changeNameModal.classList.add("hidden");
+};
+
+document.getElementById("changeNameConfirm").onclick = () => {
+    const newName = changeNameInput.value.trim();
+    if (!newName) {
+        addErrorMessage("Enter a valid username.");
+        return;
+    }
+
+    ws.send(JSON.stringify({
+        command: "/name",
+        args: [newName]
+    }));
+
+    changeNameModal.classList.add("hidden");
+};
 
 /* ------------------------- INIT ---------------------------- */
 window.onload = () => {
