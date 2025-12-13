@@ -51,6 +51,8 @@ function handleMessage(msg) {
         case "username_accepted":
             addSystemMessage(`Welcome ${msg.text}!`);
             getRooms();
+            // Ensure UI reflects the current room (hide/show Leave button)
+            updateUIForRoom(currentRoom);
             break;
 
         case "message":
@@ -84,6 +86,10 @@ function handleMessage(msg) {
             }));
             break;
 
+        case "left_room":
+            switchToLobby();
+            break;
+
         case "user_renamed":
             addSystemMessage(`📝 ${msg.text}`);
             break;
@@ -114,12 +120,43 @@ function handleMessage(msg) {
 function addChatMessage(user, text) {
     let messages = document.getElementById("messages");
 
-    let div = document.createElement("div");
-    div.className = (user === username)
-        ? "message mine"
-        : "message";
+    const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 
-    div.innerText = `[${user}] ${text}`;
+    let div = document.createElement("div");
+    div.className = (user === username) ? "message mine" : "message";
+
+    // avatar + body
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.innerText = user ? user.charAt(0).toUpperCase() : "?";
+
+    const body = document.createElement("div");
+    body.className = "message-body";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+
+    const userSpan = document.createElement("span");
+    userSpan.className = "user";
+    userSpan.innerText = user;
+
+    const timeSpan = document.createElement("span");
+    timeSpan.className = "time";
+    timeSpan.innerText = time;
+
+    meta.appendChild(userSpan);
+    meta.appendChild(timeSpan);
+
+    const content = document.createElement("div");
+    content.className = "content";
+    content.innerText = text;
+
+    body.appendChild(meta);
+    body.appendChild(content);
+
+    div.appendChild(avatar);
+    div.appendChild(body);
+
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
 }
@@ -141,7 +178,29 @@ function addMessage(text, type = "normal") {
 
     let div = document.createElement("div");
     div.className = `message ${type}`;
-    div.innerText = text;
+
+    // system / error / private use simpler layout
+    if (type === "system" || type === "error") {
+        const content = document.createElement("div");
+        content.className = "content";
+        content.innerText = text;
+        div.appendChild(content);
+    } else {
+        const avatar = document.createElement("div");
+        avatar.className = "avatar";
+        avatar.innerText = "#";
+
+        const body = document.createElement("div");
+        body.className = "message-body";
+
+        const content = document.createElement("div");
+        content.className = "content";
+        content.innerText = text;
+
+        body.appendChild(content);
+        div.appendChild(avatar);
+        div.appendChild(body);
+    }
 
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
@@ -158,12 +217,27 @@ function updateRoomList(rooms) {
         li.className = "room";
         li.dataset.room = roomName;
         li.textContent = roomName;
+        if (roomName === currentRoom) li.classList.add("active");
 
         li.onclick = () => joinRoom(roomName);
         roomList.appendChild(li);
     });
+
+    // Ensure the active room is highlighted after rebuilding the list
+    highlightActiveRoom();
 }
 
+function highlightRoom(roomName) {
+    const items = document.querySelectorAll("#roomList .room");
+
+    items.forEach(item => {
+        if (item.dataset.room === roomName) {
+            item.classList.add("active");
+        } else {
+            item.classList.remove("active");
+        }
+    });
+}
 
 function addRoom(roomName) {
     const roomList = document.getElementById("roomList");
@@ -197,8 +271,9 @@ function joinRoom(roomName) {
         command: "/list"
     }));
 
-    currentRoomName.innerText = roomName;
     addSystemMessage(`Switched to room: ${roomName}`);
+    // Update UI for the newly joined room (show/hide Leave button)
+    updateUIForRoom(roomName);
     highlightActiveRoom();
 }
 
@@ -210,8 +285,42 @@ function highlightActiveRoom() {
 
 function updateUserList(users) {
     roomUsers = users;
-    userInfo.innerText = `${users.length} user${users.length !== 1 ? 's' : ''} online`;
+    // show an icon with the user count instead of a text string
+    if (userInfo) {
+        userInfo.innerHTML = `
+            <span class="user-icon"><img src="icons/users.svg" alt="users"></span>
+            <span class="presence-dot" aria-hidden="true"></span>
+            <span class="user-count">${users.length}</span>`;
+    }
     // addSystemMessage("Users in room: " + users.join(", "));
+}
+
+document.getElementById("leaveBtn").onclick = () => {
+    ws.send(JSON.stringify({
+        command: "/leave",
+        args: []
+    }));
+};
+
+function updateUIForRoom(roomName) {
+    const leaveBtn = document.getElementById("leaveBtn");
+    const info = document.getElementById("userInfo");
+    if (roomName === "lobby") {
+        leaveBtn.classList.add("hidden");
+        if (info) info.classList.add("hidden");
+    } else {
+        leaveBtn.classList.remove("hidden");
+        if (info) info.classList.remove("hidden");
+    }
+    // Display 'Lobby' with capital first letter when server sends 'lobby'
+    const displayName = (roomName === "lobby") ? "Lobby" : roomName;
+    document.getElementById("currentRoomName").textContent = displayName;
+}
+
+function switchToLobby() {
+    highlightRoom("lobby");
+    updateUIForRoom("lobby");
+    clearMessages();
 }
 
 /* ------------------------- SEND MESSAGE -------------------- */
@@ -227,6 +336,11 @@ function sendMessage() {
     addChatMessage(username, msg);
 
     document.getElementById("msg").value = "";
+}
+
+function clearMessages() {
+    const messages = document.getElementById("messages");
+    messages.innerHTML = "";
 }
 
 /* ------------------------- CREATE ROOM MODAL --------------------------- */
@@ -304,4 +418,6 @@ document.getElementById("changeNameConfirm").onclick = () => {
 window.onload = () => {
     usernameModal.classList.remove("hidden");
     usernameInput.focus();
+    // ensure UI elements reflect initial room (hide userInfo in lobby)
+    updateUIForRoom(currentRoom);
 };

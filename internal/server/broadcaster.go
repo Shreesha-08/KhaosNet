@@ -35,6 +35,9 @@ func (b *Broadcaster) Run() {
 			delete(b.clients, client.name)
 			leave := NewOutgoing("user_left", client.name, client.currentRoom.name, fmt.Sprintf("%s left!", client.name))
 			b.msgCh <- &ClientMessage{msg: leave, name: client.name}
+			msgForClient := NewOutgoing("left_room", client.name, client.currentRoom.name, "Back to lobby")
+			client.writeCh <- msgForClient
+			client.currentRoom = nil
 
 		case msg := <-b.msgCh:
 			for _, cl := range b.clients {

@@ -2,7 +2,6 @@ package server
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 )
 
@@ -29,13 +28,6 @@ func (rm *RoomManager) CreateRoom(c *Client, roomName string) (*Room, error) {
 		return nil, errors.New("room name already taken")
 	}
 	newRoom := &Room{name: roomName, owner: c, broadcaster: NewBroadcaster()}
-	out := NewOutgoing(
-		"system",
-		"server",
-		c.currentRoom.name,
-		fmt.Sprintf("You are the owner of \"%s\"", roomName),
-	)
-	c.writeCh <- out
 	rm.rooms[roomName] = newRoom
 	go newRoom.broadcaster.Run()
 	return newRoom, nil

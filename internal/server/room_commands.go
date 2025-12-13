@@ -12,6 +12,7 @@ func RegisterRoomCommands(ch *CommandHandler) {
 	ch.Register("/leave", leaveRoomCommand)
 	ch.Register("/msg", privateMessageCommand)
 	ch.Register("/kick", kickUser)
+	ch.Register("/transferOwnership", transerRoomOwnership)
 }
 
 func listUsersCommand(c *Client, args []string) {
@@ -34,11 +35,17 @@ func listUsersCommand(c *Client, args []string) {
 }
 
 func changeNameCommand(c *Client, args []string) {
+	var roomName string
+	if c.state == "lobby" {
+		roomName = "lobby"
+	} else {
+		roomName = c.currentRoom.name
+	}
 	if len(args) == 0 {
 		out := NewOutgoing(
 			"system",
 			"server",
-			c.currentRoom.name,
+			roomName,
 			fmt.Sprintf("Your current name is: %s", c.name),
 		)
 		c.writeCh <- out
@@ -51,7 +58,7 @@ func changeNameCommand(c *Client, args []string) {
 			out := NewOutgoing(
 				"error",
 				"server",
-				c.currentRoom.name,
+				roomName,
 				"Name already taken",
 			)
 			c.writeCh <- out
@@ -59,14 +66,16 @@ func changeNameCommand(c *Client, args []string) {
 		}
 
 		oldName := c.name
-		delete(c.currentRoom.broadcaster.clients, oldName)
 		c.name = newName
-		c.currentRoom.broadcaster.clients[newName] = c
+		if c.state != "lobby" {
+			delete(c.currentRoom.broadcaster.clients, oldName)
+			c.currentRoom.broadcaster.clients[newName] = c
+		}
 
 		ack := NewOutgoing(
 			"system",
 			"server",
-			c.currentRoom.name,
+			roomName,
 			fmt.Sprintf("Username changed to %s", newName),
 		)
 		c.writeCh <- ack
@@ -74,10 +83,12 @@ func changeNameCommand(c *Client, args []string) {
 		rename := NewOutgoing(
 			"user_renamed",
 			newName,
-			c.currentRoom.name,
+			roomName,
 			fmt.Sprintf("%s is now known as %s", oldName, newName),
 		)
-		c.currentRoom.broadcaster.msgCh <- &ClientMessage{msg: rename, name: newName}
+		if c.state != "lobby" {
+			c.currentRoom.broadcaster.msgCh <- &ClientMessage{msg: rename, name: newName}
+		}
 		return
 	}
 
@@ -91,8 +102,25 @@ func changeNameCommand(c *Client, args []string) {
 }
 
 func leaveRoomCommand(c *Client, args []string) {
+	if c.name == c.currentRoom.owner.name {
+		if len(c.currentRoom.broadcaster.clients) == 1 {
+			//delete room
+		}
+		for name, cl := range c.currentRoom.broadcaster.clients {
+			c.currentRoom.owner = cl
+			ownerMsg := NewOutgoing(
+				"new_owner",
+				c.name,
+				c.currentRoom.name,
+				fmt.Sprintf("%s is the new room owner!", name),
+			)
+			c.currentRoom.broadcaster.msgCh <- &ClientMessage{msg: ownerMsg, name: c.name}
+			break
+		}
+	}
+	c.state = "lobby"
 	c.currentRoom.broadcaster.leaveCh <- c
-	c.conn.Close()
+	// c.conn.Close()
 }
 
 func privateMessageCommand(c *Client, args []string) {
@@ -134,6 +162,14 @@ func kickUser(c *Client, args []string) {
 			removedClient, exists := c.currentRoom.broadcaster.clients[targetName]
 			if exists {
 				c.currentRoom.broadcaster.leaveCh <- removedClient
+			} else {
+				out := NewOutgoing(
+					"error",
+					"server",
+					c.currentRoom.name,
+					"User not in the room.",
+				)
+				c.writeCh <- out
 			}
 		} else {
 			out := NewOutgoing(
@@ -141,6 +177,51 @@ func kickUser(c *Client, args []string) {
 				"server",
 				c.currentRoom.name,
 				"Only room owner can kick users.",
+			)
+			c.writeCh <- out
+		}
+	}
+}
+
+func transerRoomOwnership(c *Client, args []string) {
+	if len(args) == 1 {
+		if c.currentRoom.owner.name == c.name {
+			targetName := args[0]
+			if targetName == c.name {
+				out := NewOutgoing(
+					"error",
+					"server",
+					c.currentRoom.name,
+					"You are already the owner!",
+				)
+				c.writeCh <- out
+				return
+			}
+			newOwner, exists := c.currentRoom.broadcaster.clients[targetName]
+			if exists {
+				c.currentRoom.owner = newOwner
+				ownerMsg := NewOutgoing(
+					"new_owner",
+					c.name,
+					c.currentRoom.name,
+					fmt.Sprintf("%s is the new room owner!", newOwner.name),
+				)
+				c.currentRoom.broadcaster.msgCh <- &ClientMessage{msg: ownerMsg, name: c.name}
+			} else {
+				out := NewOutgoing(
+					"error",
+					"server",
+					c.currentRoom.name,
+					"User not in the room.",
+				)
+				c.writeCh <- out
+			}
+		} else {
+			out := NewOutgoing(
+				"error",
+				"server",
+				c.currentRoom.name,
+				"Only room owner can transfer ownership.",
 			)
 			c.writeCh <- out
 		}

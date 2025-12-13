@@ -5,8 +5,8 @@
     <title>KhaosNet Chat</title>
     <link rel="stylesheet" href="styles.css">
 
-    <!-- Optional: Google Font for better UI -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Optional: Google Fonts for better UI (Inter for body, Poppins for headers) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Poppins:wght@600&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -31,7 +31,10 @@
         <!-- Current Room Header -->
         <div id="chatHeader">
             <h3 id="currentRoomName">Lobby</h3>
-            <div id="userInfo" class="user-info">0 users online</div>
+            <div class="header-right">
+                <div id="userInfo" class="user-info">0 users online</div>
+                <button id="leaveBtn" class="btn-danger hidden">Leave</button>
+            </div>
         </div>
 
         <!-- Messages -->
@@ -49,8 +52,10 @@
 <div id="usernameModal" class="modal hidden">
     <div class="modal-content">
         <h3>Choose Username</h3>
-        <input id="usernameInput" placeholder="Enter username" />
-        <button id="usernameConfirm">Join Chat</button>
+        <input id="usernameInput" class="modal-input" placeholder="Enter username" />
+        <div class="modal-actions" style="justify-content:center; margin-top:12px;">
+            <button id="usernameConfirm" class="btn-primary">Join Chat</button>
+        </div>
     </div>
 </div>
 
@@ -58,8 +63,8 @@
 <div id="changeNameModal" class="modal hidden">
     <div class="modal-content">
         <h3>Change Username</h3>
-        <input id="changeNameInput" placeholder="New username" />
-        <div class="modal-actions">
+        <input id="changeNameInput" class="modal-input" placeholder="New username" />
+        <div class="modal-actions" style="justify-content:center; margin-top:12px;">
             <button id="changeNameConfirm" class="btn-primary">Update</button>
             <button id="changeNameCancel" class="btn-secondary">Cancel</button>
         </div>

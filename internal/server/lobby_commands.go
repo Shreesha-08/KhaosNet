@@ -7,6 +7,7 @@ func RegisterLobbyCommands(ch *CommandHandler) {
 	ch.Register("/create", createRoomCommand)
 	ch.Register("/join", joinRoomCommand)
 	ch.Register("/help", lobbyHelpCommand)
+	ch.Register("/renameroom", renameRoomCommand)
 	ch.Register("/exit", exitCommand)
 }
 
@@ -56,6 +57,14 @@ func createRoomCommand(c *Client, args []string) {
 		fmt.Sprintf("Room created: %s", room.name),
 	)
 	c.writeCh <- out
+
+	adminMsg := NewOutgoing(
+		"system",
+		"server",
+		"lobby",
+		fmt.Sprintf("You are the owner of \"%s\"", roomName),
+	)
+	c.writeCh <- adminMsg
 }
 
 func joinRoomCommand(c *Client, args []string) {
@@ -115,4 +124,8 @@ func lobbyHelpCommand(c *Client, args []string) {
 
 func exitCommand(c *Client, args []string) {
 	close(c.writeCh)
+}
+
+func renameRoomCommand(c *Client, args []string) {
+
 }
