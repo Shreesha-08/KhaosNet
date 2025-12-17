@@ -69,6 +69,7 @@ func (c *Client) Close() {
 		c.currentRoom.broadcaster.leaveCh <- c
 	}
 	// close(c.writeCh)
+	c.server.UnregisterClient(c)
 	c.conn.Close()
 }
 
@@ -86,6 +87,7 @@ func (c *Client) handleSetUsername(name string) {
 	}
 	c.name = name
 	c.usernameSet = true
+	c.server.RegisterClient(c)
 	out := NewOutgoing("username_accepted", "server", "lobby", name)
 	c.writeCh <- out
 
@@ -102,8 +104,6 @@ func (c *Client) sendError(text string) {
 }
 
 func (c *Client) CheckUniqueName(name string) bool {
-	// TODO: make this server level
-	// _, exists := c.currentRoom.broadcaster.clients[name]
-	// return !exists
-	return true
+	_, exists := c.server.clients[name]
+	return !exists
 }

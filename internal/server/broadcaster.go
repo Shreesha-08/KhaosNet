@@ -10,15 +10,16 @@ type Broadcaster struct {
 	leaveCh      chan *Client
 	msgCh        chan *ClientMessage
 	privateMsgCh chan *ClientMessage
+	roomName     string
 }
 
-func NewBroadcaster() *Broadcaster {
+func NewBroadcaster(roomName string) *Broadcaster {
 	clientMap := make(map[string]*Client)
 	join := make(chan *Client, 10)
 	leave := make(chan *Client)
 	msg := make(chan *ClientMessage, 10)
 	privateMsg := make(chan *ClientMessage, 10)
-	return &Broadcaster{clients: clientMap, joinCh: join, leaveCh: leave, msgCh: msg, privateMsgCh: privateMsg}
+	return &Broadcaster{clients: clientMap, joinCh: join, leaveCh: leave, msgCh: msg, privateMsgCh: privateMsg, roomName: roomName}
 }
 
 func (b *Broadcaster) Run() {
@@ -26,18 +27,17 @@ func (b *Broadcaster) Run() {
 		select {
 		case client := <-b.joinCh:
 			b.clients[client.name] = client
-			welcome := NewOutgoing("system", "server", client.currentRoom.name, fmt.Sprintf("Welcome, %s", client.name))
+			welcome := NewOutgoing("system", "server", b.roomName, fmt.Sprintf("Welcome, %s", client.name))
 			client.writeCh <- welcome
-			join := NewOutgoing("user_joined", client.name, client.currentRoom.name, fmt.Sprintf("%s joined!", client.name))
+			join := NewOutgoing("user_joined", client.name, b.roomName, fmt.Sprintf("%s joined!", client.name))
 			b.msgCh <- &ClientMessage{msg: join, name: client.name}
 
 		case client := <-b.leaveCh:
 			delete(b.clients, client.name)
-			leave := NewOutgoing("user_left", client.name, client.currentRoom.name, fmt.Sprintf("%s left!", client.name))
+			leave := NewOutgoing("user_left", client.name, b.roomName, fmt.Sprintf("%s left!", client.name))
 			b.msgCh <- &ClientMessage{msg: leave, name: client.name}
-			msgForClient := NewOutgoing("left_room", client.name, client.currentRoom.name, "Back to lobby")
+			msgForClient := NewOutgoing("left_room", client.name, b.roomName, fmt.Sprintf("Left %s!", b.roomName))
 			client.writeCh <- msgForClient
-			client.currentRoom = nil
 
 		case msg := <-b.msgCh:
 			for _, cl := range b.clients {

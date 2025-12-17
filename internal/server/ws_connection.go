@@ -18,7 +18,7 @@ func NewWebSocketConn(connection *websocket.Conn) *WebSocketConn {
 
 func (ws *WebSocketConn) Read() (string, error) {
 	var msg IncomingMessage
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Hour*1)
 	defer cancel()
 
 	if err := wsjson.Read(ctx, ws.conn, &msg); err != nil {
@@ -29,7 +29,7 @@ func (ws *WebSocketConn) Read() (string, error) {
 
 func (ws *WebSocketConn) ReadAndGetData() (*IncomingMessage, error) {
 	var msg IncomingMessage
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Hour*1)
 	defer cancel()
 
 	if err := wsjson.Read(ctx, ws.conn, &msg); err != nil {

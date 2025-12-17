@@ -27,7 +27,7 @@ func (rm *RoomManager) CreateRoom(c *Client, roomName string) (*Room, error) {
 	if _, exists := rm.rooms[roomName]; exists {
 		return nil, errors.New("room name already taken")
 	}
-	newRoom := &Room{name: roomName, owner: c, broadcaster: NewBroadcaster()}
+	newRoom := &Room{name: roomName, owner: c, broadcaster: NewBroadcaster(roomName)}
 	rm.rooms[roomName] = newRoom
 	go newRoom.broadcaster.Run()
 	return newRoom, nil

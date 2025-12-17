@@ -51,7 +51,6 @@ function handleMessage(msg) {
         case "username_accepted":
             addSystemMessage(`Welcome ${msg.text}!`);
             getRooms();
-            // Ensure UI reflects the current room (hide/show Leave button)
             updateUIForRoom(currentRoom);
             break;
 
@@ -64,6 +63,16 @@ function handleMessage(msg) {
                 const parts = msg.text.split(" ");
                 const newName = parts[parts.length - 1];
                 username = newName;
+            }
+            if (msg.text.startsWith("Welcome,")) {
+                if (msg.room) {
+                    currentRoom = msg.room;
+                    updateUIForRoom(currentRoom);
+                    highlightActiveRoom();
+                    setTimeout(() => {
+                        ws && ws.send(JSON.stringify({ command: "/list" }));
+                    }, 100);
+                }
             }
             addSystemMessage(msg.text);
             break;
@@ -267,14 +276,15 @@ function joinRoom(roomName) {
         args: [roomName]
     }));
 
-    ws.send(JSON.stringify({
-        command: "/list"
-    }));
-
     addSystemMessage(`Switched to room: ${roomName}`);
-    // Update UI for the newly joined room (show/hide Leave button)
     updateUIForRoom(roomName);
     highlightActiveRoom();
+
+    setTimeout(() => {
+        ws.send(JSON.stringify({
+            command: "/list"
+        }));
+    }, 100);
 }
 
 function highlightActiveRoom() {
@@ -416,6 +426,18 @@ document.getElementById("changeNameConfirm").onclick = () => {
 
 /* ------------------------- INIT ---------------------------- */
 window.onload = () => {
+    // Disable autocomplete and clear any prefilled values for inputs
+    const inputsToClear = [usernameInput, changeNameInput, newRoomInput, document.getElementById("msg")];
+    inputsToClear.forEach(inp => {
+        if (!inp) return;
+        try {
+            inp.autocomplete = "off";
+            inp.autocapitalize = "off";
+            inp.spellcheck = false;
+            inp.value = "";
+        } catch (e) {}
+    });
+
     usernameModal.classList.remove("hidden");
     usernameInput.focus();
     // ensure UI elements reflect initial room (hide userInfo in lobby)

@@ -42,7 +42,7 @@
 
         <!-- Input -->
         <div id="inputBar">
-            <input id="msg" type="text" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <input id="msg" type="text" placeholder="Type a message..." autocomplete="off" autocapitalize="off" spellcheck="false" onkeypress="if(event.key==='Enter') sendMessage()">
             <button id="sendBtn" onclick="sendMessage()">Send</button>
         </div>
     </div>
@@ -52,7 +52,7 @@
 <div id="usernameModal" class="modal hidden">
     <div class="modal-content">
         <h3>Choose Username</h3>
-        <input id="usernameInput" class="modal-input" placeholder="Enter username" />
+        <input id="usernameInput" class="modal-input" placeholder="Enter username" autocomplete="off" autocapitalize="off" spellcheck="false" />
         <div class="modal-actions" style="justify-content:center; margin-top:12px;">
             <button id="usernameConfirm" class="btn-primary">Join Chat</button>
         </div>
@@ -63,7 +63,7 @@
 <div id="changeNameModal" class="modal hidden">
     <div class="modal-content">
         <h3>Change Username</h3>
-        <input id="changeNameInput" class="modal-input" placeholder="New username" />
+        <input id="changeNameInput" class="modal-input" placeholder="New username" autocomplete="off" autocapitalize="off" spellcheck="false" />
         <div class="modal-actions" style="justify-content:center; margin-top:12px;">
             <button id="changeNameConfirm" class="btn-primary">Update</button>
             <button id="changeNameCancel" class="btn-secondary">Cancel</button>
@@ -75,7 +75,7 @@
 <div id="modalOverlay" class="hidden">
     <div id="modal">
         <h3>Create Room</h3>
-        <input id="newRoomName" type="text" placeholder="Room name">
+        <input id="newRoomName" type="text" placeholder="Room name" autocomplete="off" autocapitalize="off" spellcheck="false">
         <div class="modal-actions">
             <button id="createRoomConfirm" class="btn-primary">Create</button>
             <button id="createRoomCancel" class="btn-secondary">Cancel</button>

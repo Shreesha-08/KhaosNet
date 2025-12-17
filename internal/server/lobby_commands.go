@@ -65,6 +65,11 @@ func createRoomCommand(c *Client, args []string) {
 		fmt.Sprintf("You are the owner of \"%s\"", roomName),
 	)
 	c.writeCh <- adminMsg
+
+	rooms := c.server.roomMgr.ListRooms()
+	resp := NewOutgoing("rooms_list", "server", "lobby", "")
+	resp.Data = map[string]any{"rooms": rooms}
+	c.server.Broadcast(resp)
 }
 
 func joinRoomCommand(c *Client, args []string) {
@@ -92,16 +97,11 @@ func joinRoomCommand(c *Client, args []string) {
 		return
 	}
 
+	if c.state == "inRoom" {
+		leaveRoomCommand(c, []string{})
+	}
 	c.state = "inRoom"
 	c.currentRoom = room
-
-	ack := NewOutgoing(
-		"system",
-		"server",
-		roomName,
-		fmt.Sprintf("Joined room: %s", roomName),
-	)
-	c.writeCh <- ack
 	c.currentRoom.broadcaster.joinCh <- c
 }
 

@@ -120,7 +120,7 @@ func leaveRoomCommand(c *Client, args []string) {
 	}
 	c.state = "lobby"
 	c.currentRoom.broadcaster.leaveCh <- c
-	// c.conn.Close()
+	c.currentRoom = nil
 }
 
 func privateMessageCommand(c *Client, args []string) {
